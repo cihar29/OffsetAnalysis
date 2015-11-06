@@ -21,8 +21,10 @@ void l1fastjet(){
   int Rlabel = 4;
   TString pf_type = "chs";
   bool nPU_derived = false;
+  bool rhoCentral = true;
 
-  ifstream scale_file( Form("./plots/scalefactor/DataMcSF_L1FastJet_AK%iPF", Rlabel) + pf_type + ".txt" );
+  ifstream scale_file( Form("DataMcSF_L1FastJet_AK%iPF", Rlabel) + pf_type + ".txt" );
+//./plots/scalefactor/
 
   ifstream mc_file( Form("Summer15_25nsV2_MC_L1FastJet_AK%iPF", Rlabel) + pf_type + ".txt" );
   string scale_line, mc_line;
@@ -88,8 +90,8 @@ void l1fastjet(){
   }
   const int mc_lines = lines + 1;
 
-  TFile* data_root = TFile::Open( Form("RunII_DataD_2509_R%i.root", Rlabel) );
-  TFile* mc_root = TFile::Open( Form("RunII_MCD_2509_R%i.root", Rlabel) );
+  TFile* data_root = TFile::Open( Form("RunII_DataD_1510silver_p863_R%i.root", Rlabel) );
+  TFile* mc_root = TFile::Open( Form("RunII_MCD_1510silver_p863_R%i.root", Rlabel) );
 
   TString hname;
 
@@ -109,8 +111,14 @@ void l1fastjet(){
   double nPU_low = h_nPU->GetBinCenter(low_bin);
   double nPU_high = h_nPU->GetBinCenter(high_bin);
 
-  if (nPU_derived) hname = "p_rho_nPU";
-  else hname = "p_rho_nPV";
+  if (nPU_derived){
+      if (rhoCentral) hname = "p_rhoCentral0_nPU";
+      else hname = "p_rho_nPU";
+  }
+  else{
+      if (rhoCentral) hname = "p_rhoCentral0_nPV";
+      else hname = "p_rho_nPV";
+  }
 
   TProfile* data_rho_nPU = (TProfile*) data_root->Get(hname);
   TProfile* mc_rho_nPU = (TProfile*) mc_root->Get(hname);
@@ -317,9 +325,12 @@ void l1fastjet(){
   if (nPU_derived) var_string = "#mu";
   else var_string = "N_{PV}";
 
+  string rho_string = "";
+  if (rhoCentral) rho_string = "central, ";
+
   text.DrawLatex(-1.5, 0.88, Form( "#bf{%s = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}}}" , var_string.c_str(), mean_nPU, nPU_high, nPU_low ) );
-  text.DrawLatex(-1.5, 0.84, Form( "#bf{#rho_{Data} = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}} GeV}" , rho_nominal, rho_high, rho_low ) );
-  text.DrawLatex(-1.5, 0.8, Form( "#bf{#rho_{MC} = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}} GeV}" , mc_rho_mean, mc_rho_high, mc_rho_low ) );
+  text.DrawLatex(-1.5, 0.84, Form( "#bf{#rho_{%sData} = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}} GeV}" , rho_string.c_str(), rho_nominal, rho_high, rho_low ) );
+  text.DrawLatex(-1.5, 0.8, Form( "#bf{#rho_{%sMC} = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}} GeV}" , rho_string.c_str(), mc_rho_mean, mc_rho_high, mc_rho_low ) );
 
   text.SetTextSize(0.035);
   text.SetTextColor(1);

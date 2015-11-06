@@ -72,8 +72,8 @@ void offsetpT_stack(){
   cin >> plot_ratio;
   cout << endl;
 
-  TFile* mcFile = TFile::Open("RunII_MCD_2509_p865_R4.root");
-  TFile* dataFile = TFile::Open("RunII_DataD_2509_p865_R4.root");
+  TFile* mcFile = TFile::Open("RunII_MCD_1510silver_p863_R4.root");
+  TFile* dataFile = TFile::Open("RunII_DataD_1510silver_p863_R4.root");
 
   vector<TH1F*> h_MC (8);
   vector<TH1F*> h_Data (8);
@@ -406,6 +406,7 @@ void offsetpT_stack(){
   //text.DrawLatex(2, 1.41, "19.7 fb^{-1} (8 TeV)");
 
   if (pf_choice == -1){  //all PF particles
+    float topY = 0.9;
 
     w_Data[0]->SetAxisRange(-3.4,3.3);
     w_Data[3]->SetAxisRange(-5,-2.6);
@@ -417,7 +418,7 @@ void offsetpT_stack(){
     w_Data[7]->SetAxisRange(-3,3);
 
     h->GetYaxis()->SetTitleOffset(1.1);
-    h->GetYaxis()->SetRangeUser(0, 0.8);
+    h->GetYaxis()->SetRangeUser(0, topY);
     mcStack->Draw("same");
     dataStack->Draw("samep");
     cloneStack->Draw("samep");
@@ -445,12 +446,12 @@ void offsetpT_stack(){
     //text.SetTextFont(52);
     //text.DrawLatex(-4.5, 0.73, "Preliminary");
 
-    text.DrawLatex(-4.8, 0.803, "Run II");
+    text.DrawLatex(-4.8, topY+0.004*topY, "Run2015D Silver");
 
     text.SetTextSize(0.045);
     text.SetTextFont(42);
-    if (plot_ratio == 'y') text.DrawLatex(3, 0.803, "#sqrt{s} = 13 TeV");
-    else text.DrawLatex(2.5, 0.803, "#sqrt{s} = 13 TeV");
+    if (plot_ratio == 'y') text.DrawLatex(3, topY+0.004*topY, "#sqrt{s} = 13 TeV");
+    else text.DrawLatex(2.5, topY+0.004*topY, "#sqrt{s} = 13 TeV");
     //text.DrawLatex(-4.5, 0.5, "R = 0.4");
 
     gPad->RedrawAxis();
@@ -540,7 +541,7 @@ void offsetpT_stack(){
     text.SetTextFont(61);
     text.DrawLatex(-4, 0.4, title);
 
-    text.DrawLatex(-4.8, 0.502, "Run II");
+    text.DrawLatex(-4.8, 0.502, "Run2015D Silver");
 
     text.SetTextSize(0.045);
     text.SetTextFont(42);

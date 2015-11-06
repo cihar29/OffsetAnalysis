@@ -100,6 +100,7 @@ void scalefactor(){
   int Rlabel = 4;
   TString pf_type = "chs";
   bool nPU_derived = false;
+  bool rhoCentral = true;
 
   ifstream data_file("./plots/indirectRho/" + pf_type + Form("/RunII_V0_Data_RC_AK%iPF", Rlabel) + pf_type + ".txt");
   ifstream mc_file("./plots/indirectRho/" + pf_type + Form("/RunII_V0_MC_RC_AK%iPF", Rlabel) + pf_type + ".txt");
@@ -161,19 +162,25 @@ void scalefactor(){
   data_file.close();
   mc_file.close();
 
-  TFile* data_root = TFile::Open( Form("RunII_DataD_2509_R%i.root", Rlabel) );
-  TFile* mc_root = TFile::Open( Form("RunII_MCD_2509_R%i.root", Rlabel) );
+  TFile* data_root = TFile::Open( Form("RunII_DataD_1510silver_p863_R%i.root", Rlabel) );
+  TFile* mc_root = TFile::Open( Form("RunII_MCD_1510silver_p863_R%i.root", Rlabel) );
 
   TString hname;
-  if (nPU_derived) hname = "p_rho_nPU";
-  else hname = "p_rho_nPV";
+  if (nPU_derived){
+      if (rhoCentral) hname = "p_rhoCentral0_nPU";
+      else hname = "p_rho_nPU";
+  }
+  else{
+      if (rhoCentral) hname = "p_rhoCentral0_nPV";
+      else hname = "p_rho_nPV";
+  }
 
   TProfile* data_rho_nPU = (TProfile*) data_root->Get(hname);
 
   for (int i=1; i<=100; i++)
     cout << i << "\t" << data_rho_nPU->GetBinCenter(i) << "\t" << data_rho_nPU->GetBinContent(i) << endl;
 
-  int low_bin = 1, high_bin = 29;
+  int low_bin = 2, high_bin = 30;
   cout << low_bin << "\t" << high_bin << endl;
 
   TProfile* mc_rho_nPU = (TProfile*) mc_root->Get(hname);
@@ -185,7 +192,7 @@ void scalefactor(){
   fit->SetLineColor(1);
   fit->SetLineWidth(2);
 
-  float rho_start = 3;
+  float rho_start = 4;
   float rho_end = 12;
 
   int size;

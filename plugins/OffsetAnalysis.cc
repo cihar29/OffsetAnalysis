@@ -42,7 +42,6 @@
 #include <TRandom3.h>
 
 using namespace std;
-const float MU_ADJUST = 1;
 
 class OffsetAnalysis : public edm::EDAnalyzer {
   public:
@@ -59,7 +58,6 @@ class OffsetAnalysis : public edm::EDAnalyzer {
     void FillProfile2D(const TString& histName, const Double_t& value1, const Double_t& value2, const Double_t& value3);
     double deltaPhi(double phi1, double phi2);
     TString getPFCandidateId(const int& id);
-    int toInt(double bin_size, int bins, double dub);
 	  
     TRandom3* rand;
     TFile* root_file;
@@ -69,7 +67,7 @@ class OffsetAnalysis : public edm::EDAnalyzer {
     map<TString, TProfile2D*> m_Profiles2D;
 
     TString RootFileName_;
-    double coneDR_, PUstep_, rhoStep_;
+    double coneDR_;
     int maxNPV_, maxNPU_, maxRho_;
     bool isMC_, reweight_;
     edm::InputTag pvTag_, puTag_, pfTag_, rhoTag_;
@@ -82,9 +80,7 @@ OffsetAnalysis::OffsetAnalysis(const edm::ParameterSet& iConfig)
   RootFileName_ = iConfig.getParameter<string> ("RootFileName");
   coneDR_ = iConfig.getParameter<double> ("coneDR");
   maxNPV_ = iConfig.getParameter<int> ("maxNPV");
-  PUstep_ = iConfig.getParameter<double> ("PUstep");
   maxNPU_ = iConfig.getParameter<int> ("maxNPU");
-  rhoStep_ = iConfig.getParameter<double> ("rhoStep");
   maxRho_ = iConfig.getParameter<int> ("maxRho");
   isMC_ = iConfig.getParameter<bool> ("isMC");
   reweight_ = iConfig.getParameter<bool> ("reweight");
@@ -110,6 +106,8 @@ void OffsetAnalysis::beginJob()
   m_Histos1D[hname] = new TH1F(hname,hname,100,-50,50);
   hname = "nPV_all";
   m_Histos1D[hname] = new TH1F(hname,hname,100,0,100);
+  hname = "nPV0";
+  m_Histos1D[hname] = new TH1F(hname,hname,100,0,100);
   hname = "nPV";
   m_Histos1D[hname] = new TH1F(hname,hname,100,0,100);
   hname = "nPU";
@@ -121,6 +119,14 @@ void OffsetAnalysis::beginJob()
   m_Histos2D[hname] = new TH2F(hname,hname,100,0,maxNPU_,maxNPV_,0,maxNPV_);
   hname = "p_nPV_nPU";
   m_Profiles[hname] = new TProfile(hname,hname,100,0,maxNPU_);
+  hname = "2h_nPVall_nPU";
+  m_Histos2D[hname] = new TH2F(hname,hname,100,0,maxNPU_,maxNPV_,0,maxNPV_);
+  hname = "p_nPVall_nPU";
+  m_Profiles[hname] = new TProfile(hname,hname,100,0,maxNPU_);
+  hname = "2h_nPV0_nPU";
+  m_Histos2D[hname] = new TH2F(hname,hname,100,0,maxNPU_,maxNPV_,0,maxNPV_);
+  hname = "p_nPV0_nPU";
+  m_Profiles[hname] = new TProfile(hname,hname,100,0,maxNPU_);
 
   hname = "2h_rho_nPU";
   m_Histos2D[hname] = new TH2F(hname,hname,100,0,maxNPU_,100,0,maxRho_);
@@ -130,6 +136,28 @@ void OffsetAnalysis::beginJob()
   hname = "2h_rho_nPV";
   m_Histos2D[hname] = new TH2F(hname,hname,maxNPV_,0,maxNPV_,100,0,maxRho_);
   hname = "p_rho_nPV";
+  m_Profiles[hname] = new TProfile(hname,hname,maxNPV_,0,maxNPV_);
+
+  hname = "rhoCentral0";
+  m_Histos1D[hname] = new TH1F(hname,hname,100,0,100);
+  hname = "2h_rhoCentral0_nPU";
+  m_Histos2D[hname] = new TH2F(hname,hname,100,0,maxNPU_,100,0,maxRho_);
+  hname = "p_rhoCentral0_nPU";
+  m_Profiles[hname] = new TProfile(hname,hname,100,0,maxNPU_);
+  hname = "2h_rhoCentral0_nPV";
+  m_Histos2D[hname] = new TH2F(hname,hname,maxNPV_,0,maxNPV_,100,0,maxRho_);
+  hname = "p_rhoCentral0_nPV";
+  m_Profiles[hname] = new TProfile(hname,hname,maxNPV_,0,maxNPV_);
+
+  hname = "rhoCentralCharged";
+  m_Histos1D[hname] = new TH1F(hname,hname,100,0,100);
+  hname = "2h_rhoCentralCharged_nPU";
+  m_Histos2D[hname] = new TH2F(hname,hname,100,0,maxNPU_,100,0,maxRho_);
+  hname = "p_rhoCentralCharged_nPU";
+  m_Profiles[hname] = new TProfile(hname,hname,100,0,maxNPU_);
+  hname = "2h_rhoCentralCharged_nPV";
+  m_Histos2D[hname] = new TH2F(hname,hname,maxNPV_,0,maxNPV_,100,0,maxRho_);
+  hname = "p_rhoCentralCharged_nPV";
   m_Profiles[hname] = new TProfile(hname,hname,maxNPV_,0,maxNPV_);
 
   //PF Histos//
@@ -182,9 +210,9 @@ void OffsetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
     if (reweight_){
 
       float weights[] =
-      {0.00000, 1846.58557, 323.90454, 201.00256, 67.96064, 0.00000, 23.43144, 24.10982, 6.18488, 3.64942, 
-       1.23681, 0.01198, 0.00000, 0.00000, 0.01453, 0.01416, 0.02090, 0.00778, 0.01530, 0.00786, 
-       0.22739, 0.91598, 1.32492, 1.00000, 0.56834, 0.38858, 0.42114, 0.57203, 0.30766, 0.00000, 
+      {0.00000, 304.47073, 109.69337, 42.31831, 98.72736, 11.58533, 3.49539, 4.43090, 5.55305, 0.69875, 
+       0.35308, 0.37753, 0.03418, 0.00052, 0.00716, 0.00987, 0.00655, 0.00326, 0.00702, 0.48605, 
+       0.38253, 0.30134, 0.71854, 1.00000, 0.80642, 0.53452, 0.32552, 0.23700, 0.02542, 0.00000, 
        0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 
        0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 
        0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 
@@ -199,32 +227,36 @@ void OffsetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
     }
   }
   else
-    true_pileup = MU_ADJUST * getAvgPU( int(iEvent.id().run()), int(iEvent.getLuminosityBlock().luminosityBlock()) );
-
-  int intPU = toInt(PUstep_, maxNPU_, true_pileup);
-
-  FillHist1D("nPU", true_pileup);
+    true_pileup = getAvgPU( int(iEvent.id().run()), int(iEvent.getLuminosityBlock().luminosityBlock()) );
 
 //------------ Primary Vertices ------------//
 
   edm::Handle< edm::View<reco::Vertex> > primaryVertices;
   iEvent.getByLabel(pvTag_, primaryVertices);
-	
-  FillHist1D("nPV_all", primaryVertices->size());
-  int nPV = 0; // has more than 4 degrees of freedom
 
+  int nPV_all = primaryVertices->size();
+  if (!isMC_ && nPV_all <= 1) return;
+
+  FillHist1D("nPV_all", nPV_all);
+
+  int nPV = 0; int nPV0 = 0;
   edm::View<reco::Vertex>::const_iterator i_pv, endpv = primaryVertices->end();
   for (i_pv = primaryVertices->begin();  i_pv != endpv;  ++i_pv) {
 	
     double z = i_pv->z();
     FillHist1D("pv_all_z", z);
 
-    if ( !i_pv->isFake() && i_pv->ndof() > 4){
-      FillHist1D("pv_z", z);
-      nPV++;
+    if ( !i_pv->isFake() && z <= 24 && i_pv->position().rho() <= 2){
+      nPV0++; //no cut on ndof
+
+      if (i_pv->ndof() > 4){
+        FillHist1D("pv_z", z);
+        nPV++;
+      }
     }
   }
   FillHist1D("nPV", nPV);
+  FillHist1D("nPV0", nPV0);
 /*
 //------------ nPV by LS ------------//
 
@@ -246,15 +278,44 @@ void OffsetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
 
   FillHist1D("rho", rho);
 
+  edm::Handle<double> rhoCentral0Handle;
+  iEvent.getByLabel("fixedGridRhoFastjetCentralNeutral", rhoCentral0Handle);
+  double rhoCentral0 = *rhoCentral0Handle;
+
+  FillHist1D("rhoCentral0", rhoCentral0);
+
+  edm::Handle<double> rhoCentralChargedHandle;
+  iEvent.getByLabel("fixedGridRhoFastjetCentralChargedPileUp", rhoCentralChargedHandle);
+  double rhoCentralCharged = *rhoCentralChargedHandle;
+
+  FillHist1D("rhoCentralCharged", rhoCentralCharged);
+
 //------------ Histos ------------//
 
+  int intPU = true_pileup + 0.5;
+  FillHist1D("nPU", true_pileup);
+
   FillHist2D("2h_nPV_nPU", true_pileup, nPV);
+  FillHist2D("2h_nPVall_nPU", true_pileup, nPV_all);
+  FillHist2D("2h_nPV0_nPU", true_pileup, nPV0);
   FillHist2D("2h_rho_nPU", true_pileup, rho);
   FillHist2D("2h_rho_nPV", nPV, rho);
 
   FillProfile("p_nPV_nPU", true_pileup, nPV);
+  FillProfile("p_nPVall_nPU", true_pileup, nPV_all);
+  FillProfile("p_nPV0_nPU", true_pileup, nPV0);
   FillProfile("p_rho_nPU", true_pileup, rho);
   FillProfile("p_rho_nPV", nPV, rho);
+
+  FillHist2D("2h_rhoCentral0_nPU", true_pileup, rhoCentral0);
+  FillHist2D("2h_rhoCentral0_nPV", nPV, rhoCentral0);
+  FillProfile("p_rhoCentral0_nPU", true_pileup, rhoCentral0);
+  FillProfile("p_rhoCentral0_nPV", nPV, rhoCentral0);
+
+  FillHist2D("2h_rhoCentralCharged_nPU", true_pileup, rhoCentralCharged);
+  FillHist2D("2h_rhoCentralCharged_nPV", nPV, rhoCentralCharged);
+  FillProfile("p_rhoCentralCharged_nPU", true_pileup, rhoCentralCharged);
+  FillProfile("p_rhoCentralCharged_nPV", nPV, rhoCentralCharged);
 
 //------------ PF Candidates ------------//
 
@@ -580,19 +641,6 @@ TString OffsetAnalysis::getPFCandidateId(const int& id)
 		return "egamma_HF"; //HF EM particle
 	else
 		return "no Id";
-}
-
-//returns double (such as true PU or rho) as an integer
-int OffsetAnalysis::toInt(double bin_size, int bins, double dub)
-{     
-  int i = -1;
-   
-  if(dub <  0.) return 0;
-  if(dub > double(bins) * bin_size) return bins-1;
-   
-  while( dub >= double(i+1)*bin_size ) i++;
-
-  return i;   
 }
 
 //define this as a plug-in

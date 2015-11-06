@@ -93,10 +93,11 @@ void offsetpT(){
 
   //Start Program//
         
-  TString var_type = "nPU"; // nPU, nPV
+  TString var_type = "nPV"; // nPU, nPV
   bool isIndirect = true;   // indirectRho
+  bool rhoCentral = true;
 
-  int n1 = 7, n2 = 15;
+  int n1 = 3, n2 = 18;
                 
   const int nPoints = n2-n1;
 
@@ -119,8 +120,8 @@ void offsetpT(){
   const double R = 0.4;
   int Rlabel = R*10;
 
-  TFile* mcFile = TFile::Open( Form("RunII_MCD_2509_R%i.root", Rlabel) );
-  TFile* dataFile = TFile::Open( Form("RunII_DataD_2509_R%i.root", Rlabel) );
+  TFile* mcFile = TFile::Open( Form("RunII_MCD_1510silver_p863_R%i.root", Rlabel) );
+  TFile* dataFile = TFile::Open( Form("RunII_DataD_1510silver_p863_R%i.root", Rlabel) );
 
   vector<TProfile*> mcProfiles;
   vector<TProfile*> dataProfiles;
@@ -138,8 +139,14 @@ void offsetpT(){
   if (isIndirect){
 
     TString hname;
-    if (var_type.EqualTo("nPU")) hname = "p_rho_nPU";
-    else hname = "p_rho_nPV";
+    if (var_type.EqualTo("nPU")) {
+      if (rhoCentral) hname = "p_rhoCentral0_nPU";
+      else hname = "p_rho_nPU";
+    }
+    else {
+      if (rhoCentral) hname = "p_rhoCentral0_nPV";
+      else hname = "p_rho_nPV";
+    }
 
     NPUtoRho_mc = (TProfile*) mcFile->Get(hname);
     NPUtoRho_data = (TProfile*) dataFile->Get(hname);
@@ -215,8 +222,9 @@ void offsetpT(){
     else if ( var_type.EqualTo("indirectRho") ) xTitle = "<#rho> (GeV)";
 
     TCanvas* c = new TCanvas("c", "Fit", 600, 600);
-    TH1F* h = new TH1F("h", "h", 100, 0, 15);
-    int topY = 15;
+    float topX = 15;
+    TH1F* h = new TH1F("h", "h", 100, 0, topX);
+    float topY = 30;
 
     h->GetXaxis()->SetTitle(xTitle);
     h->GetYaxis()->SetTitle("Offset p_{T} (GeV)");
@@ -232,35 +240,36 @@ void offsetpT(){
     mcGraph->SetLineColor(2);
     mcGraph->Draw("Psame");
 
-    float spacing = 0.7;
-    int legOff = 1;
+    float spacing = topY*0.045;
+    float legOff = 0.05*topX;
+    float topStart = 0.9*topY;
 
     TLatex text;
     text.SetTextSize(0.04);
 
     if (pf_type.EqualTo("all"))
-      text.DrawLatex(0.5, topY + 0.1, Form("RunII, PF %4.1f #leq #eta #leq %4.1f", eta-0.05, eta+0.05) );
+      text.DrawLatex(0.025*topX, topY+0.004*topY, Form("RunII, PF %4.1f #leq #eta #leq %4.1f", eta-0.05, eta+0.05) );
     else
-      text.DrawLatex(0.5, topY + 0.1, "Run II, PF " + pf_type + Form(" %4.1f #leq #eta #leq %4.1f", eta-0.05, eta+0.05) );
+      text.DrawLatex(0.025*topX, topY+0.004*topY, "Run II, PF " + pf_type + Form(" %4.1f #leq #eta #leq %4.1f", eta-0.05, eta+0.05) );
 
     //text.DrawLatex(n2-4, topY-0.7-spacing, "R = 0.4" );
 
-    text.DrawLatex(legOff, topY-1-legOff, "Data");
-    text.DrawLatex(legOff, topY-1-legOff-1*spacing, Form("#chi^{2}/ndof = %4.2f/%i", f_data->GetChisquare(), f_data->GetNDF() ) );
-    text.DrawLatex(legOff, topY-1-legOff-2*spacing, Form("p0 = %4.3f #pm %4.3f", f_data->GetParameter(0), f_data->GetParError(0) ) );
-    text.DrawLatex(legOff, topY-1-legOff-3*spacing, Form("p1 = %4.3f #pm %4.3f", f_data->GetParameter(1), f_data->GetParError(1) ) );
-    text.DrawLatex(legOff, topY-1-legOff-4*spacing, Form("p2 = %4.4f #pm %4.4f", f_data->GetParameter(2), f_data->GetParError(2) ) );
+    text.DrawLatex(legOff, topStart, "Data");
+    text.DrawLatex(legOff, topStart-1*spacing, Form("#chi^{2}/ndof = %4.2f/%i", f_data->GetChisquare(), f_data->GetNDF() ) );
+    text.DrawLatex(legOff, topStart-2*spacing, Form("p0 = %4.3f #pm %4.3f", f_data->GetParameter(0), f_data->GetParError(0) ) );
+    text.DrawLatex(legOff, topStart-3*spacing, Form("p1 = %4.3f #pm %4.3f", f_data->GetParameter(1), f_data->GetParError(1) ) );
+    text.DrawLatex(legOff, topStart-4*spacing, Form("p2 = %4.4f #pm %4.4f", f_data->GetParameter(2), f_data->GetParError(2) ) );
     text.SetTextColor(2);
-    text.DrawLatex(legOff, topY-1-legOff-6*spacing, "MC");
-    text.DrawLatex(legOff, topY-1-legOff-7*spacing, Form("#chi^{2}/ndof = %4.2f/%i", f_mc->GetChisquare(), f_mc->GetNDF() ) );
-    text.DrawLatex(legOff, topY-1-legOff-8*spacing, Form("p0 = %4.3f #pm %4.3f", f_mc->GetParameter(0), f_mc->GetParError(0) ) );
-    text.DrawLatex(legOff, topY-1-legOff-9*spacing, Form("p1 = %4.3f #pm %4.3f", f_mc->GetParameter(1), f_mc->GetParError(1) ) );
-    text.DrawLatex(legOff, topY-1-legOff-10*spacing, Form("p2 = %4.4f #pm %4.4f", f_mc->GetParameter(2), f_mc->GetParError(2) ) );
+    text.DrawLatex(legOff, topStart-6*spacing, "MC");
+    text.DrawLatex(legOff, topStart-7*spacing, Form("#chi^{2}/ndof = %4.2f/%i", f_mc->GetChisquare(), f_mc->GetNDF() ) );
+    text.DrawLatex(legOff, topStart-8*spacing, Form("p0 = %4.3f #pm %4.3f", f_mc->GetParameter(0), f_mc->GetParError(0) ) );
+    text.DrawLatex(legOff, topStart-9*spacing, Form("p1 = %4.3f #pm %4.3f", f_mc->GetParameter(1), f_mc->GetParError(1) ) );
+    text.DrawLatex(legOff, topStart-10*spacing, Form("p2 = %4.4f #pm %4.4f", f_mc->GetParameter(2), f_mc->GetParError(2) ) );
 
     text.SetTextSize(0.035);
     text.SetTextColor(1);
     text.SetTextFont(42);
-    text.DrawLatex(12, topY+0.1, "#sqrt{s} = 13 TeV");
+    text.DrawLatex(0.8*topX, topY+0.004*topY, "#sqrt{s} = 13 TeV");
 
     c->Print("./plots/" + var_type + "/" + pf_type + "/" + pf_type + "_pT_" + var_type + Form("_eta%4.2f", eta) + ".pdf");
     delete h;
