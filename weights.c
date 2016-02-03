@@ -7,26 +7,19 @@ using namespace std;
 
 void weights(){
   
-  TFile* mcFile = TFile::Open("25nsRunIISpring15_MC_R4.root");
-  TFile* dataFile = TFile::Open("RunII_DataD_2509_R4.root");
+  TFile* mcFile = TFile::Open("MC_R4.root");
+  TFile* dataFile = TFile::Open("DataD_R4.root");
 
   TString hname;
 
-  hname = "pileup";
+  hname = "nPU";
 
   TH1F* h_MC = (TH1F*) mcFile->Get(hname);
-
-hname = "nPU";
   TH1F* h_Data = (TH1F*) dataFile->Get(hname);
 
   TH1F* h_MC_Data = (TH1F*) h_Data->Clone("h_MC_Data");
   h_MC_Data->Divide(h_MC);
-  //h_MC_Data->Scale( 1/ h_MC_Data->GetMaximum() );
-
-  //For RunII low statistics center around mean
-  double mean = h_Data->GetMean();
-  cout << mean << endl;
-  h_MC_Data->Scale( 1 / h_MC_Data->GetBinContent( h_MC_Data->FindBin(mean) ) );
+  h_MC_Data->Scale( 1/ h_MC_Data->GetMaximum() );
 
   h_Data->Scale( 1 / h_Data->GetMaximum() );
   h_MC->Scale( 1 / h_MC->GetMaximum() );

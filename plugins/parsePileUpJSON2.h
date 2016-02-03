@@ -17,7 +17,7 @@ double getAvgPU(int run, int ls) {
   return m_PU[run][ls];
 }
 
-int parsePileUpJSON2(string filename="pileup_0211_json.txt") {
+int parsePileUpJSON2(string filename="pileup_JSON_1911.txt") {
 
   cout << "Minimum Bias Cross Section: " << MINBIAS_XS << endl;
   cout << "Opening " << filename << "...";

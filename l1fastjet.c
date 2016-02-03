@@ -16,25 +16,38 @@
 
 using namespace std;
 
+void setStyle();
+
 void l1fastjet(){
 
-  int Rlabel = 4;
+  const int ETA_BINS = 82;
+  double etabins[ETA_BINS+1] =
+  {-5.191, -4.889, -4.716, -4.538, -4.363, -4.191, -4.013, -3.839, -3.664, -3.489, -3.314, -3.139, -2.964, -2.853, -2.65,
+   -2.5, -2.322, -2.172, -2.043, -1.93, -1.83, -1.74, -1.653, -1.566, -1.479, -1.392, -1.305, -1.218, -1.131, -1.044, -0.957,
+   -0.879, -0.783, -0.696, -0.609, -0.522, -0.435, -0.348, -0.261, -0.174, -0.087, 0,
+   0.087, 0.174, 0.261, 0.348, 0.435, 0.522, 0.609, 0.696, 0.783, 0.879, 0.957, 1.044, 1.131, 1.218, 1.305, 1.392, 1.479,
+   1.566, 1.653, 1.74, 1.83, 1.93, 2.043, 2.172, 2.322, 2.5, 2.65, 2.853, 2.964, 3.139, 3.314, 3.489, 3.664, 3.839, 4.013,
+   4.191, 4.363, 4.538, 4.716, 4.889, 5.191};
+
+  int Rlabel = 8;
   TString pf_type = "chs";
   bool nPU_derived = false;
-  bool rhoCentral = true;
+  bool rhoCentral = false;
 
-  ifstream scale_file( Form("DataMcSF_L1FastJet_AK%iPF", Rlabel) + pf_type + ".txt" );
-//./plots/scalefactor/
+  TFile* data_root = TFile::Open( Form("DataD_R%i.root", Rlabel) );
+  TFile* mc_root = TFile::Open( Form("MC_reweight_R%i.root", Rlabel) );
 
-  ifstream mc_file( Form("Summer15_25nsV2_MC_L1FastJet_AK%iPF", Rlabel) + pf_type + ".txt" );
+  ifstream scale_file( Form("plots/scalefactor/Fall15_25nsV1_DataMcSF_L1RC_AK%iPF", Rlabel) + pf_type + ".txt" );
+
+  ifstream mc_file( Form("Fall15_25nsV1_MC_L1FastJet_AK%iPF", Rlabel) + pf_type + ".txt" );
   string scale_line, mc_line;
 
   //read first line
   getline(scale_file, scale_line);
   getline(mc_file, mc_line);
 
-  double scale_eta1[100], scale_eta2[100], scale_p0[100], scale_p1[100], scale_p2[100];
-  double mc_eta1[100], mc_eta2[100], mc_p0[100], mc_p1[100];
+  double scale_p0[ETA_BINS], scale_p1[ETA_BINS], scale_p2[ETA_BINS];
+  double mc_p0[ETA_BINS], mc_p1[ETA_BINS];
 
   for (int i=0; getline(scale_file,scale_line); i++){
 
@@ -53,9 +66,7 @@ void l1fastjet(){
       while (scale_line.at(0) == ' ')  //get rid of white space between columns
         scale_line.erase(0, 1);
 
-      if (col_num == 0) scale_eta1[i] = stod(str);
-      else if (col_num == 1) scale_eta2[i] = stod(str);
-      else if (col_num == 5) scale_p0[i] = stod(str);
+      if (col_num == 5) scale_p0[i] = stod(str);
       else if (col_num == 6) scale_p1[i] = stod(str);
     }
     //last column after loop
@@ -82,16 +93,10 @@ void l1fastjet(){
       while (!mc_line.empty() && mc_line.at(0) == ' ')  //get rid of white space between columns
         mc_line.erase(0, 1);
 
-      if (col_num == 0) mc_eta1[i] = stod(str);
-      else if (col_num == 1) mc_eta2[i] = stod(str);
-      else if (col_num == 9) mc_p0[i] = stod(str);
+      if (col_num == 9) mc_p0[i] = stod(str);
       else if (col_num == 10) mc_p1[i] = stod(str);
     }
   }
-  const int mc_lines = lines + 1;
-
-  TFile* data_root = TFile::Open( Form("RunII_DataD_1510silver_p863_R%i.root", Rlabel) );
-  TFile* mc_root = TFile::Open( Form("RunII_MCD_1510silver_p863_R%i.root", Rlabel) );
 
   TString hname;
 
@@ -131,47 +136,21 @@ void l1fastjet(){
   double mc_rho_low = mc_rho_nPU->GetBinContent( mc_rho_nPU->FindBin( nPU_low ) );
   double mc_rho_high = mc_rho_nPU->GetBinContent( mc_rho_nPU->FindBin( nPU_high ) );
 
-  double eta[mc_lines], sf[mc_lines], sf_low[mc_lines], sf_high[mc_lines], new_p0[mc_lines], new_p1[mc_lines];
+  double eta[ETA_BINS], sf[ETA_BINS], sf_low[ETA_BINS], sf_high[ETA_BINS], new_p0[ETA_BINS], new_p1[ETA_BINS];
 
-  int j = 0; //the scale index
+  for (int i=0; i<ETA_BINS; i++){
 
-  for (int i=0; i<mc_lines; i++){
+    eta[i] = 0.5*(etabins[i]+etabins[i+1]);
 
-    double scale_eta = (scale_eta1[j]+scale_eta2[j])/2;
-    eta[i] = (mc_eta1[i]+mc_eta2[i])/2;
+    sf_low[i] = scale_p0[i] + scale_p1[i]*rho_low + scale_p2[i]*rho_low*rho_low;
+    sf_high[i] = scale_p0[i] + scale_p1[i]*rho_high + scale_p2[i]*rho_high*rho_high;
 
-    //match eta bins
-    if (j == 0){
-      double scale_etaUP = (scale_eta1[j+1]+scale_eta2[j+1])/2;
-
-      if ( abs(scale_etaUP - eta[i]) < abs(scale_eta - eta[i]) ) j++;
-    }
-    else if (j == 99){
-      double scale_etaDOWN = (scale_eta1[j-1]+scale_eta2[j-1])/2;
-
-      if ( abs(scale_etaDOWN - eta[i]) < abs(scale_eta - eta[i]) ) j--;
-    }
-    else{
-      double scale_etaUP = (scale_eta1[j+1]+scale_eta2[j+1])/2;
-      double scale_etaDOWN = (scale_eta1[j-1]+scale_eta2[j-1])/2;
-
-      double diff = abs(scale_eta - eta[i]); double diffUP = abs(scale_etaUP - eta[i]); double diffDOWN = abs(scale_etaDOWN - eta[i]);
-
-      if (diffUP < diff && diffUP < diffDOWN) j++;
-      else if (diffDOWN < diffUP && diffDOWN < diff) j--;
-    }
-
-    sf_low[i] = scale_p0[j] + scale_p1[j]*rho_low + scale_p2[j]*rho_low*rho_low;
-    sf_high[i] = scale_p0[j] + scale_p1[j]*rho_high + scale_p2[j]*rho_high*rho_high;
-
-    sf[i] = scale_p0[j] + scale_p1[j]*rho_nominal + scale_p2[j]*rho_nominal*rho_nominal;
+    sf[i] = scale_p0[i] + scale_p1[i]*rho_nominal + scale_p2[i]*rho_nominal*rho_nominal;
     new_p0[i] = sf[i] * mc_p0[i];
     new_p1[i] = sf[i] * mc_p1[i];
-
-    j++;
   }
 
-  ofstream writeFile( Form("Summer15_25nsV0_DATA_L1FastJet_AK%iPF", Rlabel) + pf_type + ".txt" );
+  ofstream writeFile( Form("Fall15_25nsV1_DATA_L1FastJet_AK%iPF", Rlabel) + pf_type + ".txt" );
   mc_file.clear();
   mc_file.seekg(0, mc_file.beg);
 
@@ -205,6 +184,65 @@ void l1fastjet(){
   }
   mc_file.close();
   writeFile.close();
+
+  setStyle();
+
+  TGraphErrors* graph = new TGraphErrors(ETA_BINS, eta, sf, 0, 0);
+  TGraphErrors* g_high = new TGraphErrors(ETA_BINS, eta, sf_high, 0, 0);
+  TGraphErrors* g_low = new TGraphErrors(ETA_BINS, eta, sf_low, 0, 0);  
+
+  TCanvas* c = new TCanvas("c", "c", 600, 600);
+  TH1F* h = new TH1F("h", "h", ETA_BINS, etabins);
+
+  h->GetXaxis()->SetTitle("#eta");
+  h->GetYaxis()->SetTitle("Scale Factor");
+  h->GetYaxis()->SetTitleOffset(1.2);
+  h->GetYaxis()->SetRangeUser(0.9, 1.2);
+  h->Draw();
+
+  graph->SetMarkerStyle(20);
+  graph->SetMarkerColor(1);
+  graph->Draw("psame");
+
+  g_high->SetMarkerStyle(2);
+  g_high->SetMarkerColor(kRed);
+  g_high->Draw("psame");
+
+  g_low->SetMarkerStyle(5);
+  g_low->SetMarkerColor(kBlue);
+  g_low->Draw("psame");
+
+  TLatex text;
+  text.SetNDC();
+  text.SetTextSize(0.04);
+
+  if (pf_type.EqualTo("all"))
+    text.DrawLatex(0.17, 0.96, Form("AK%i PF", Rlabel));
+  else
+    text.DrawLatex(0.17, 0.96, Form("AK%i PF%s", Rlabel, pf_type.Data()));
+
+  string var_string;
+  if (nPU_derived) var_string = "#mu";
+  else var_string = "N_{PV}";
+
+  string rho_string = "";
+  if (rhoCentral) rho_string = "central, ";
+
+  float leg = 0.35;
+
+  text.DrawLatex(0.45, leg, Form( "#bf{%s = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}}}" , var_string.c_str(), mean_nPU, nPU_high, nPU_low ) );
+  text.DrawLatex(0.45, leg-0.07, Form( "#bf{#rho_{%sData} = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}} GeV}" , rho_string.c_str(), rho_nominal, rho_high, rho_low ) );
+  text.DrawLatex(0.45, leg-0.14, Form( "#bf{#rho_{%sMC} = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}} GeV}" , rho_string.c_str(), mc_rho_mean, mc_rho_high, mc_rho_low ) );
+
+  text.SetTextSize(0.035);
+  text.SetTextColor(1);
+  text.SetTextFont(42);
+  text.DrawLatex(0.56, 0.96, "Run 2015D - 2.1 fb^{-1} (13 TeV)");
+
+  c->Print("l1fastjet_scalefactor_eta_PF" + pf_type + ".pdf");
+}
+
+void setStyle(){
 
 //Style//
 
@@ -284,58 +322,4 @@ void l1fastjet(){
   tdrStyle->cd();
 
 //End Style//
-
-  TGraphErrors* graph = new TGraphErrors(mc_lines, eta, sf, 0, 0);
-  TGraphErrors* g_high = new TGraphErrors(mc_lines, eta, sf_high, 0, 0);
-  TGraphErrors* g_low = new TGraphErrors(mc_lines, eta, sf_low, 0, 0);  
-
-  TCanvas* c = new TCanvas("c", "c", 600, 600);
-  TH1F* h = new TH1F("h", "h", 100, -5, 5);
-  float topY = 1.2;
-
-  h->GetXaxis()->SetTitle("#eta");
-  h->GetYaxis()->SetTitle("Scale Factor");
-  h->GetYaxis()->SetTitleOffset(1.2);
-  h->GetYaxis()->SetRangeUser(0.7, topY);
-  h->Draw();
-
-  graph->SetMarkerStyle(20);
-  graph->SetMarkerColor(1);
-  graph->Draw("psame");
-
-  g_high->SetMarkerStyle(2);
-  g_high->SetMarkerColor(kRed);
-  g_high->Draw("psame");
-
-  g_low->SetMarkerStyle(5);
-  g_low->SetMarkerColor(kBlue);
-  g_low->Draw("psame");
-
-  TLatex text;
-  text.SetTextSize(0.04);
-
-  if (pf_type.EqualTo("all"))
-    text.DrawLatex(-4.9, topY+0.003, "Run II, PF");
-  else
-    text.DrawLatex(-4.9, topY+0.003, "Run II, PF " + pf_type);
-
-  //text.DrawLatex(n2-4, topY-spacing, "R = 0.4" );
-
-  string var_string;
-  if (nPU_derived) var_string = "#mu";
-  else var_string = "N_{PV}";
-
-  string rho_string = "";
-  if (rhoCentral) rho_string = "central, ";
-
-  text.DrawLatex(-1.5, 0.88, Form( "#bf{%s = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}}}" , var_string.c_str(), mean_nPU, nPU_high, nPU_low ) );
-  text.DrawLatex(-1.5, 0.84, Form( "#bf{#rho_{%sData} = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}} GeV}" , rho_string.c_str(), rho_nominal, rho_high, rho_low ) );
-  text.DrawLatex(-1.5, 0.8, Form( "#bf{#rho_{%sMC} = %4.1f^{ #color[2]{%4.1f}}_{ #color[4]{%4.1f}} GeV}" , rho_string.c_str(), mc_rho_mean, mc_rho_high, mc_rho_low ) );
-
-  text.SetTextSize(0.035);
-  text.SetTextColor(1);
-  text.SetTextFont(42);
-  text.DrawLatex(3, topY+0.003, "#sqrt{s} = 13 TeV");
-
-  c->Print("l1fastjet_scalefactor_eta_PF" + pf_type + ".pdf");
 }

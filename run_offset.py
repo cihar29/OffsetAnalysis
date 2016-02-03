@@ -10,25 +10,19 @@ process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 
 readFiles = cms.untracked.vstring()
 process.source = cms.Source ("PoolSource", fileNames = readFiles)
 readFiles.extend( [
 
-   '/store/mc/RunIISpring15DR74/SingleNeutrino/AODSIM/Asympt25nsRaw_MCRUN2_74_V9-v2/50000/004C5D84-9708-E511-AB2E-00259073E384.root'
+   '/store/mc/RunIIFall15DR76/SingleNeutrino/AODSIM/PU25nsData2015v1_76X_mcRun2_asymptotic_v12-v1/00000/004252D9-C094-E511-928F-AC162DA8C2B0.root'
 
-  # '/store/mc/RunIISpring15DR74/SingleNeutrino/AODSIM/Asympt50nsRaw_MCRUN2_74_V9A-v2/10000/00350BD2-FD08-E511-97F6-00074305CE2D.root'
-
-  # '/store/data/Run2015B/ZeroBias/RECO/PromptReco-v1/000/251/251/00000/02A7FB5A-7427-E511-ABE1-02163E012284.root'
-
-  # '/store/data/Run2015C/ZeroBias/RECO/PromptReco-v1/000/254/790/00000/0A17F7BE-064A-E511-AD50-02163E0141C4.root'
-
-  # '/store/data/Run2015D/ZeroBias/RECO/PromptReco-v3/000/256/729/00000/1E7C4AFE-995F-E511-9D6B-02163E011ABA.root'
+  # '/store/data/Run2015D/ZeroBias1/AOD/16Dec2015-v1/10000/180AD4E6-D0B0-E511-B655-0CC47A4D7662.root'  
 
 ] );
 
 isMC = cms.bool(True)
-process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 OutputName = "_MC"
 
 if isMC == False:
@@ -37,8 +31,7 @@ if isMC == False:
   process.load( "Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cff" )
   process.load( "Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff" )
   from Configuration.AlCa.GlobalTag import GlobalTag
-  # process.GlobalTag = GlobalTag( process.GlobalTag, '74X_dataRun2_Prompt_v1' ) # Run2015 B/C
-  process.GlobalTag = GlobalTag( process.GlobalTag, '74X_dataRun2_Prompt_v2' ) # Run2015 D
+  process.GlobalTag = GlobalTag( process.GlobalTag, '76X_dataRun2_v15' )
 
   # ZeroBias Trigger
   process.HLTZeroBias =cms.EDFilter("HLTHighLevel",
@@ -53,11 +46,11 @@ if isMC == False:
   process.load('RecoMET.METFilters.CSCTightHaloFilter_cfi')
 
   #PV Filter
-  process.primaryVertexFilter = cms.EDFilter( "GoodVertexFilter",
-                                              vertexCollection = cms.InputTag('offlinePrimaryVertices'),
-                                              minimumNDOF = cms.uint32(4),
-                                              maxAbsZ = cms.double(24),
-                                              maxd0 = cms.double(2) )
+  #process.primaryVertexFilter = cms.EDFilter( "GoodVertexFilter",
+  #                                            vertexCollection = cms.InputTag('offlinePrimaryVertices'),
+  #                                            minimumNDOF = cms.uint32(4),
+  #                                            maxAbsZ = cms.double(24),
+  #                                            maxd0 = cms.double(2) )
 
   #HCAL HBHE
   process.load('CommonTools.RecoAlgos.HBHENoiseFilterResultProducer_cfi')
@@ -65,7 +58,7 @@ if isMC == False:
   process.ApplyBaselineHBHENoiseFilter = cms.EDFilter('BooleanFlagFilter',
     # inputLabel = cms.InputTag('HBHENoiseFilterResultProducer','HBHENoiseFilterResult'), # this is for the 50ns
     # inputLabel = cms.InputTag('HBHENoiseFilterResultProducer','HBHENoiseFilterResultRun2Loose'),  # this is for the 25ns
-     inputLabel = cms.InputTag('HBHENoiseFilterResultProducer','HBHENoiseFilterResultRun2Tight'),  # this is for the 25ns
+    inputLabel = cms.InputTag('HBHENoiseFilterResultProducer','HBHENoiseFilterResultRun2Tight'),  # this is for the 25ns
     reverseDecision = cms.bool(False)
   )
 
@@ -75,17 +68,16 @@ if isMC == False:
   OutputName = "_Data"
 
 params = cms.PSet(
-    PUstep = cms.double(1.),
-    rhoStep = cms.double(1.),
+    numSkip = cms.int32(89),
     maxNPV = cms.int32(50),
     maxNPU = cms.int32(50),
     maxRho = cms.int32(50),
     isMC = isMC,
-    reweight = cms.bool(True),
+    reweight = cms.bool(False),
     pvTag = cms.InputTag("offlinePrimaryVertices"),
     puTag = cms.InputTag("addPileupInfo"),
     pfTag = cms.InputTag("particleFlow"),
-    rhoTag = cms.InputTag("fixedGridRhoAll")
+    rhoTag = cms.InputTag("fixedGridRhoFastjetAll")
 )
 
 process.pfR4 = cms.EDAnalyzer("OffsetAnalysis",
@@ -124,6 +116,6 @@ else:
                         process.CSCTightHaloFilter *
                         process.HBHENoiseFilterResultProducer *
                         process.ApplyBaselineHBHENoiseFilter *
-                        process.primaryVertexFilter *
+                        #process.primaryVertexFilter *
                         process.eeBadScFilter *
                         process.myseq )
